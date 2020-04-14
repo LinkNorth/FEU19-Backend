@@ -1,20 +1,57 @@
+const fs = require('fs');
 const express = require('express');
 
+const DB_PATH = 'db.json';
 const app = express();
-const movies = [{id: 0, title: 'Star wars'}];
-let ID = 1;
+let movies;
+try {
+  movies = JSON.parse(fs.readFileSync(DB_PATH));
+} catch (e) {
+  movies = [];
+  save();
+}
+let ID = 0;
+for (let movie of movies) {
+  if (movie.id > ID) {
+    ID = movie.id;
+  }
+}
+ID += 1;
 
 // {id: 0, title: 'Star wars'}
 
+function save() {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(DB_PATH, JSON.stringify(movies), function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 app.use(express.json());
 
-app.get('/movies', (req, res) => {
+app.get('/', (req, res) => {
+  res.send('Hello');
+});
+
+const movieRouter = express.Router();
+
+movieRouter.use((req, res, next) => {
+  console.log('Got a movie route');
+  next();
+});
+
+movieRouter.get('/', (req, res) => {
   res.json({
     data: movies
   });
 });
 
-app.get('/movies/:id', (req, res) => {
+movieRouter.get('/:id', (req, res) => {
   let id = parseInt(req.params.id);
   let movie = movies.find(function(movie) {
     return movie.id === id;
@@ -28,7 +65,7 @@ app.get('/movies/:id', (req, res) => {
 });
 
 // {title: 'Star wars'}
-app.post('/movies', (req, res) => {
+movieRouter.post('/', (req, res) => {
   let movie = req.body;
   if (!movie.title) {
     res.status(400).end();
@@ -38,11 +75,18 @@ app.post('/movies', (req, res) => {
   movie.id = ID;
   movies.push(movie);
   ID++;
-  res.status(201).send(movie);
+  save()
+    .then(() => {
+      res.status(201).send(movie);
+    })
+    .catch(e => {
+      console.error(e);
+      res.status(500).end();
+    });
 });
 
 // {title: 'Star wars'}
-app.put('/movies/:id', (req, res) => {
+movieRouter.put('/:id', (req, res) => {
   let movie = req.body;
   let id = parseInt(req.params.id);
   if (!movie.title || movie.id !== id) {
@@ -60,10 +104,17 @@ app.put('/movies/:id', (req, res) => {
   }
 
   movies[movieIndex] = movie;
-  res.status(200).send(movie);
+  save()
+    .then(() => {
+      res.status(200).send(movie);
+    })
+    .catch(e => {
+      console.error(e);
+      res.status(500).end();
+    });
 });
 
-app.delete('/movies/:id', (req, res) => {
+movieRouter.delete('/:id', (req, res) => {
   let id = parseInt(req.params.id);
 
   let movieIndex = movies.findIndex(function(movie) {
@@ -76,8 +127,17 @@ app.delete('/movies/:id', (req, res) => {
   }
 
   movies.splice(movieIndex, 1);
-  res.status(204).end();
+  save()
+    .then(() => {
+      res.status(204).end();
+    })
+    .catch(e => {
+      console.error(e);
+      res.status(500).end();
+    });
 });
+
+app.use('/movies', movieRouter);
 
 function find(arr, f) {
   for (let x of arr) {
@@ -86,6 +146,6 @@ function find(arr, f) {
   return null;
 }
 
-app.listen(8000, function() {
-  console.log('Started server on 8000');
+app.listen(8080, function() {
+  console.log('Started server on 8080');
 });
