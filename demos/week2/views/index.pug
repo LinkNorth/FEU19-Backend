@@ -1,0 +1,19 @@
+html
+  head
+    title= title
+    link(href='/style.css' rel='stylesheet')
+  body
+    include header.pug
+    
+    if fruits.length
+      p Number of fruits per page: #{size}
+      p Page: #{page}
+      ul
+        each fruit in fruits
+          li= fruit
+    else
+      p No fruits :(
+
+    include form.pug
+
+    include footer.pug
