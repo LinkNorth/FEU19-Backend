@@ -1,0 +1,12 @@
+html
+  head
+  body
+    h1 Hello #{user.email}
+    if user.fruits
+      ul
+        each fruit in user.fruits
+          li= fruit
+
+    form(method="POST" action="/fruits")
+      input(type="text" name="fruit")
+      button(type="submit") Create
